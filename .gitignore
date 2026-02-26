@@ -1,0 +1,35 @@
+# Audio data (too large for git)
+samples/
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Model weights (auto-downloaded)
+*.ckpt
+*.pt
+*.pth
+models/weights/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Env
+.env
+venv/
+.venv/

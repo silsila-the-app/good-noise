@@ -26,12 +26,33 @@ Technique:
 
 from typing import Dict, Any
 
+import numpy as np
 import torch
 import torch.nn.functional as F
-import torchaudio
 from tqdm import tqdm
 
 from .base import BaseAttack
+
+
+def _mel_filterbank(sr: int, n_fft: int, n_mels: int) -> np.ndarray:
+    """Compute a standard mel filterbank matrix. Returns (n_mels, n_fft//2+1)."""
+    f_min, f_max = 0.0, sr / 2.0
+    # mel scale boundaries
+    m_min = 2595 * np.log10(1 + f_min / 700)
+    m_max = 2595 * np.log10(1 + f_max / 700)
+    mel_points = np.linspace(m_min, m_max, n_mels + 2)
+    hz_points = 700 * (10 ** (mel_points / 2595) - 1)
+    bin_points = np.floor((n_fft + 1) * hz_points / sr).astype(int)
+    fbank = np.zeros((n_mels, n_fft // 2 + 1), dtype=np.float32)
+    for m in range(1, n_mels + 1):
+        start, center, end = bin_points[m-1], bin_points[m], bin_points[m+1]
+        for k in range(start, center):
+            if center > start:
+                fbank[m-1, k] = (k - start) / (center - start)
+        for k in range(center, end):
+            if end > center:
+                fbank[m-1, k] = (end - k) / (end - center)
+    return fbank
 
 
 class ASRDisruptionAttack(BaseAttack):
@@ -59,8 +80,10 @@ class ASRDisruptionAttack(BaseAttack):
             self._whisper_type = "openai"
             self._whisper = openai_whisper.load_model("base", device=self.device)
             self._whisper.eval()
-            # EOS token id for openai whisper
-            self._eos_id = self._whisper.dims.n_vocab - 1  # 50256 for base
+            from whisper.tokenizer import get_tokenizer
+            _tok = get_tokenizer(multilingual=False)
+            self._sot_id = _tok.sot    # start-of-transcript token
+            self._eos_id = _tok.eot    # end-of-transcript token (what we drive toward)
         except ImportError:
             from transformers import WhisperProcessor, WhisperForConditionalGeneration
             self._whisper_type = "hf"
@@ -72,19 +95,34 @@ class ASRDisruptionAttack(BaseAttack):
             self._eos_id = self._processor.tokenizer.eos_token_id
 
     def _log_mel(self, waveform: torch.Tensor, sample_rate: int) -> torch.Tensor:
-        """Compute Whisper-compatible log-mel spectrogram (differentiable)."""
+        """Compute Whisper-compatible log-mel spectrogram (differentiable, no torchaudio)."""
         if sample_rate != 16000:
-            waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
-        mel_transform = torchaudio.transforms.MelSpectrogram(
-            sample_rate=16000,
-            n_fft=400,
-            hop_length=160,
-            n_mels=80,
-            window_fn=torch.hann_window,
-        ).to(self.device)
-        mel = mel_transform(waveform.squeeze(0))  # (80, frames)
+            import scipy.signal as ssig, numpy as np
+            wav_np = waveform.squeeze().detach().cpu().numpy()
+            n = int(len(wav_np) * 16000 / sample_rate)
+            wav_np = ssig.resample(wav_np, n).astype(np.float32)
+            waveform = torch.from_numpy(wav_np).unsqueeze(0).to(self.device)
+
+        # Manual differentiable STFT-based log-mel
+        n_fft, hop, n_mels, sr = 400, 160, 80, 16000
+        window = torch.hann_window(n_fft, device=self.device)
+        wav = waveform.squeeze(0)  # (T,)
+
+        # STFT → magnitude
+        stft = torch.stft(wav, n_fft=n_fft, hop_length=hop, window=window,
+                          return_complex=True, center=True)  # (freq, frames)
+        mag = stft.abs()  # (freq, frames)
+
+        # Mel filterbank
+        import numpy as np
+        mel_fb = torch.from_numpy(
+            _mel_filterbank(sr, n_fft, n_mels)
+        ).float().to(self.device)  # (n_mels, n_fft//2+1)
+
+        mel = mel_fb @ mag  # (n_mels, frames)
         log_mel = torch.log(mel.clamp(min=1e-10))
-        # Whisper expects shape (batch, 80, 3000); pad/crop
+
+        # Whisper expects (batch, 80, 3000)
         target_len = 3000
         if log_mel.shape[-1] < target_len:
             log_mel = F.pad(log_mel, (0, target_len - log_mel.shape[-1]))
@@ -109,8 +147,8 @@ class ASRDisruptionAttack(BaseAttack):
             if self._whisper_type == "openai":
                 # openai whisper: model.encoder + decoder with forced_tokens
                 audio_features = self._whisper.encoder(log_mel)
-                # Decode toward EOS: compute logits for first output token
-                tokens = torch.tensor([[self._whisper.dims.sot]], device=self.device)
+                # Feed SOT token, drive first output toward EOT (empty transcript)
+                tokens = torch.tensor([[self._sot_id]], device=self.device)
                 logits = self._whisper.decoder(tokens, audio_features)  # (1, 1, vocab)
                 logits = logits[:, -1, :]  # last token
                 loss = F.cross_entropy(logits, target)

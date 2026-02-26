@@ -35,10 +35,9 @@ import sys
 from pathlib import Path
 
 import torch
-import torchaudio
+import numpy as np
 import soundfile as sf
 import yaml
-import numpy as np
 
 
 def load_config(path: str) -> dict:
@@ -46,18 +45,22 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(f)
 
 
-def load_audio(path: str, target_sr: int = 16000) -> tuple[torch.Tensor, int]:
-    """Load audio, resample to target_sr, peak-normalize."""
-    waveform, sr = torchaudio.load(path)
-    if sr != target_sr:
-        waveform = torchaudio.functional.resample(waveform, sr, target_sr)
+def load_audio(path: str, target_sr: int = 16000) -> tuple:
+    """Load audio via soundfile, resample to target_sr, peak-normalize."""
+    import scipy.signal as ssig
+    wav_np, sr = sf.read(path, dtype="float32", always_2d=False)
     # Mix to mono
-    if waveform.shape[0] > 1:
-        waveform = waveform.mean(dim=0, keepdim=True)
+    if wav_np.ndim > 1:
+        wav_np = wav_np.mean(axis=1)
+    # Resample if needed
+    if sr != target_sr:
+        n_samples = int(len(wav_np) * target_sr / sr)
+        wav_np = ssig.resample(wav_np, n_samples).astype(np.float32)
     # Peak normalize
-    peak = waveform.abs().max()
+    peak = np.abs(wav_np).max()
     if peak > 1e-6:
-        waveform = waveform / peak
+        wav_np = wav_np / peak
+    waveform = torch.from_numpy(wav_np).unsqueeze(0)  # (1, T)
     return waveform, target_sr
 
 

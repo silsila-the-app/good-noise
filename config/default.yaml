@@ -56,10 +56,10 @@ attacks:
 
   spectral_filter:
     # Noise-free ClearMask-style attack: no added perturbation
-    formant_suppression_db: 20.0     # attenuation of speaker-critical formant bands
+    formant_suppression_db: 12.0     # attenuation of speaker-critical formant bands
     fundamental_keep_hz: 100         # keep pitch information below this frequency
-    reverb_rt60: 0.4                  # reverb RT60 in seconds to add
-    reverb_mix: 0.3                   # wet/dry mix
+    reverb_rt60: 0.25                 # reverb RT60 in seconds to add
+    reverb_mix: 0.2                   # wet/dry mix
 
 metrics:
   pesq_mode: wb              # "wb" (wideband) or "nb" (narrowband)

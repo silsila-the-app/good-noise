@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-02-26T21:09:40.669873Z",
+  "git_commit": "fe83eb2",
+  "n_speakers": 5,
+  "n_utterances_per_speaker": 4,
+  "device": "cuda",
+  "results": [
+    {
+      "attack": "spectral_filter",
+      "mean_snr": -1.353,
+      "mean_pesq": 1.342,
+      "mean_stoi": 0.717,
+      "mean_speaker_similarity": 0.791
+    },
+    {
+      "attack": "mel_disruption",
+      "mean_snr": 22.044,
+      "mean_pesq": 1.52,
+      "mean_stoi": 0.948,
+      "mean_speaker_similarity": 0.753
+    },
+    {
+      "attack": "pgd_embedding",
+      "mean_snr": 23.706,
+      "mean_pesq": 1.848,
+      "mean_stoi": 0.97,
+      "mean_speaker_similarity": -0.927
+    },
+    {
+      "attack": "psychoacoustic_pgd",
+      "mean_snr": 17.818,
+      "mean_pesq": 1.392,
+      "mean_stoi": 0.935,
+      "mean_speaker_similarity": -0.951
+    },
+    {
+      "attack": "universal_pgd",
+      "mean_snr": 20.92,
+      "mean_pesq": 1.711,
+      "mean_stoi": 0.969,
+      "mean_speaker_similarity": 0.587
+    },
+    {
+      "attack": "asr_disruption",
+      "mean_snr": -2.916,
+      "mean_pesq": 3.441,
+      "mean_stoi": 0.147,
+      "mean_speaker_similarity": 0.953
+    }
+  ]
+}

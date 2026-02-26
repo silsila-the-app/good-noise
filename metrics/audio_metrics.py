@@ -20,12 +20,14 @@ import torch
 
 def _to_numpy_16k(waveform: torch.Tensor, sample_rate: int) -> np.ndarray:
     """Convert tensor to float32 numpy array at 16 kHz."""
-    import torchaudio
     if waveform.dim() > 1:
         waveform = waveform.squeeze(0)
+    arr = waveform.detach().cpu().float().numpy()
     if sample_rate != 16000:
-        waveform = torchaudio.functional.resample(waveform, sample_rate, 16000)
-    return waveform.detach().cpu().float().numpy()
+        import scipy.signal as ssig
+        n = int(len(arr) * 16000 / sample_rate)
+        arr = ssig.resample(arr, n).astype(np.float32)
+    return arr
 
 
 def compute_snr(original: np.ndarray, perturbed: np.ndarray) -> float:

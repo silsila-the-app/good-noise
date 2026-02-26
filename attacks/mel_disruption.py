@@ -17,35 +17,52 @@ Technique:
 
 from typing import Dict, Any, List
 
+import numpy as np
 import torch
 import torch.nn.functional as F
-import torchaudio
 from tqdm import tqdm
 
 from .base import BaseAttack
 
 
+def _make_mel_fb(n_fft: int, n_mels: int, sr: int) -> np.ndarray:
+    """Returns mel filterbank (n_mels, n_fft//2+1)."""
+    f_min, f_max = 0.0, sr / 2.0
+    m_min = 2595 * np.log10(1 + f_min / 700)
+    m_max = 2595 * np.log10(1 + f_max / 700)
+    mel_pts = np.linspace(m_min, m_max, n_mels + 2)
+    hz_pts = 700 * (10 ** (mel_pts / 2595) - 1)
+    bins = np.floor((n_fft + 1) * hz_pts / sr).astype(int)
+    fbank = np.zeros((n_mels, n_fft // 2 + 1), dtype=np.float32)
+    for m in range(1, n_mels + 1):
+        s, c, e = bins[m-1], bins[m], bins[m+1]
+        for k in range(s, c):
+            if c > s: fbank[m-1, k] = (k - s) / (c - s)
+        for k in range(c, e):
+            if e > c: fbank[m-1, k] = (e - k) / (e - c)
+    return fbank
+
+
 class _DifferentiableMelSpec(torch.nn.Module):
-    """Differentiable mel spectrogram (fully compatible with autograd)."""
+    """Pure-PyTorch differentiable mel spectrogram (no torchaudio needed)."""
 
     def __init__(self, n_fft: int, n_mels: int, sample_rate: int, device: torch.device):
         super().__init__()
-        hop = n_fft // 4
-        self.mel = torchaudio.transforms.MelSpectrogram(
-            sample_rate=sample_rate,
-            n_fft=n_fft,
-            hop_length=hop,
-            n_mels=n_mels,
-            power=1.0,  # amplitude spectrogram
-        ).to(device)
+        self.n_fft = n_fft
+        self.hop = n_fft // 4
+        self.register_buffer("window", torch.hann_window(n_fft))
+        fb = torch.from_numpy(_make_mel_fb(n_fft, n_mels, sample_rate))
+        self.register_buffer("mel_fb", fb)  # (n_mels, n_fft//2+1)
         self.to(device)
 
     def forward(self, waveform: torch.Tensor) -> torch.Tensor:
-        # waveform: (1, T) or (T,)
-        if waveform.dim() == 1:
-            waveform = waveform.unsqueeze(0)
-        mel = self.mel(waveform)  # (1, n_mels, frames)
-        return torch.log1p(mel)   # log-mel
+        if waveform.dim() == 2:
+            waveform = waveform.squeeze(0)
+        stft = torch.stft(waveform, n_fft=self.n_fft, hop_length=self.hop,
+                          window=self.window, return_complex=True, center=True)
+        mag = stft.abs()  # (freq_bins, frames)
+        mel = self.mel_fb @ mag  # (n_mels, frames)
+        return torch.log1p(mel)  # log-mel
 
 
 class MelDisruptionAttack(BaseAttack):

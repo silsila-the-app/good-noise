@@ -30,11 +30,13 @@ class SpeakerEncoder:
             from speechbrain.inference.speaker import EncoderClassifier
         except ImportError:
             from speechbrain.pretrained import EncoderClassifier
+        from speechbrain.utils.fetching import LocalStrategy
 
         self._model = EncoderClassifier.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",
             savedir=_SAVEDIR,
             run_opts={"device": str(self.device)},
+            local_strategy=LocalStrategy.COPY,
         )
         self._model.eval()
 
