@@ -1,0 +1,73 @@
+# good-noise default configuration
+# All experiment variation belongs here, not in new scripts.
+
+audio:
+  sample_rate: 16000          # Hz; all inputs resampled to this
+  normalize: true             # peak-normalize input to [-1, 1]
+
+attacks:
+  # Which attack(s) to run (list). Options:
+  #   pgd_embedding, psychoacoustic_pgd, mel_disruption,
+  #   universal_pgd, asr_disruption, spectral_filter
+  active: [pgd_embedding]
+
+  # Global PGD settings (overridden per-attack if specified)
+  pgd:
+    eps: 0.01                 # L-inf epsilon bound (audio in [-1, 1])
+    alpha: 0.001              # step size per PGD iteration
+    iterations: 100           # number of PGD steps
+    random_start: true        # randomize initial perturbation
+
+  pgd_embedding:
+    eps: 0.01
+    alpha: 0.001
+    iterations: 100
+    target_mode: centroid     # "centroid" | "random" | "none" (untargeted)
+    random_start: true
+
+  psychoacoustic_pgd:
+    eps: 0.02                 # slightly larger — masking constrains the perceptible portion
+    alpha: 0.002
+    iterations: 150
+    masking_gain_db: 6.0      # safety margin below masking threshold (dB)
+    bark_bands: 24
+
+  mel_disruption:
+    eps: 0.01
+    alpha: 0.001
+    iterations: 100
+    n_fft_scales: [2048, 1024, 512]   # multi-scale mel analysis
+    n_mels: 80
+    kl_weight: 0.5            # weight of KL-toward-noise loss component
+
+  universal_pgd:
+    eps: 0.015
+    alpha: 0.001
+    iterations: 200
+    n_samples: 10             # number of training utterances to aggregate over
+    random_start: true
+
+  asr_disruption:
+    eps: 0.02
+    alpha: 0.002
+    iterations: 200
+    prefix_seconds: 0.64      # length of adversarial prefix segment
+    target_token: eos         # "eos" = force end-of-sequence (silence); "blank" = CTC blank
+
+  spectral_filter:
+    # Noise-free ClearMask-style attack: no added perturbation
+    formant_suppression_db: 20.0     # attenuation of speaker-critical formant bands
+    fundamental_keep_hz: 100         # keep pitch information below this frequency
+    reverb_rt60: 0.4                  # reverb RT60 in seconds to add
+    reverb_mix: 0.3                   # wet/dry mix
+
+metrics:
+  pesq_mode: wb              # "wb" (wideband) or "nb" (narrowband)
+  speaker_similarity: true   # compute cosine similarity of speaker embeddings
+  snr: true
+  stoi: true
+
+logging:
+  ledger: experiments/ledger.jsonl
+  save_perturbed: true        # write protected audio to disk
+  output_dir: outputs/

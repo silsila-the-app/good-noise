@@ -1,0 +1,14 @@
+torch>=2.1.0
+torchaudio>=2.1.0
+speechbrain>=1.0.0
+openai-whisper>=20231117
+transformers>=4.40.0
+librosa>=0.10.0
+soundfile>=0.12.1
+numpy>=1.24.0
+scipy>=1.11.0
+pesq>=0.0.4
+pystoi>=0.3.3
+pyyaml>=6.0
+tqdm>=4.66.0
+matplotlib>=3.8.0
