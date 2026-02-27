@@ -5,6 +5,30 @@ Raw per-run data in `ledger.jsonl`. Summary JSON in `benchmark_summary.json`.
 
 ---
 
+## EXP-002 — CombineAttack benchmark (2026-02-26)
+
+**Status:** Completed
+**Hardware:** RTX 5090 Laptop GPU, CUDA 12.8
+**Dataset:** Same as EXP-001 — 5 speakers, 4 utterances each
+**Attack:** `combine` — joint PGD over embedding + multi-scale mel + KL + psychoacoustic
+
+### Results
+
+| Metric | Value | vs. Best Individual |
+|---|---|---|
+| Mean SNR | 22.21 dB | pgd_embedding: 23.71 |
+| Mean PESQ | 1.702 | pgd_embedding: 1.848 |
+| Mean STOI | 0.959 | pgd_embedding: 0.970 |
+| **Mean Speaker Sim** | **−0.973** | **psychoacoustic_pgd: −0.951 (+0.022)** |
+
+Per-utterance speaker similarity range: −0.952 to −0.983 (tight, consistent across all speakers).
+
+### Key Finding
+
+Joint multi-surface optimization beats every individual attack on speaker similarity (−0.973 vs. −0.951 for best individual). The unified PGD loop finds a perturbation at the intersection of all feasible attack regions. Consistent performance across diverse speakers confirms generalization.
+
+---
+
 ## EXP-001 — Full 6-attack benchmark on LibriSpeech test-clean (2026-02-26)
 
 **Status:** Completed

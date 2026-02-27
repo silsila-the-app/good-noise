@@ -36,6 +36,7 @@ ATTACKS = [
     "psychoacoustic_pgd",
     "universal_pgd",
     "asr_disruption",
+    "combine",
 ]
 ATTACK_LABELS = {
     "spectral_filter": "Spectral\nFilter",
@@ -44,6 +45,7 @@ ATTACK_LABELS = {
     "psychoacoustic_pgd": "Psycho\nPGD",
     "universal_pgd": "Universal\nPGD",
     "asr_disruption": "ASR\nDisruption",
+    "combine": "Combine\n(Ours)",
 }
 
 # Representative speaker/utterance for wave plots
@@ -57,6 +59,7 @@ COLORS = {
     "psychoacoustic_pgd": "#4D96FF",
     "universal_pgd": "#C77DFF",
     "asr_disruption": "#FF9F43",
+    "combine": "#00F5D4",
 }
 
 SR = 16000
@@ -180,7 +183,7 @@ def plot_spectrogram_grid():
     n = min(len(clean), 5 * SR)
     clean = clean[:n]
 
-    show_attacks = ["pgd_embedding", "psychoacoustic_pgd", "mel_disruption", "universal_pgd"]
+    show_attacks = ["pgd_embedding", "psychoacoustic_pgd", "combine", "mel_disruption"]
     ncols = len(show_attacks) + 1  # clean + 4 attacks
 
     fig, axes = plt.subplots(1, ncols, figsize=(5 * ncols, 4.5))
@@ -284,7 +287,7 @@ def plot_perturbation_detail():
     n = min(len(clean), 4 * SR)
     clean = clean[:n]
 
-    top_attacks = ["pgd_embedding", "psychoacoustic_pgd", "mel_disruption"]
+    top_attacks = ["pgd_embedding", "psychoacoustic_pgd", "combine"]
     fig, axes = plt.subplots(2, 3, figsize=(15, 7))
     fig.patch.set_facecolor("#0F0F1A")
     freqs = np.fft.rfftfreq(n, 1 / SR)

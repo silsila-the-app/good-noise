@@ -46,6 +46,13 @@
       "mean_pesq": 3.441,
       "mean_stoi": 0.147,
       "mean_speaker_similarity": 0.953
+    },
+    {
+      "attack": "combine",
+      "mean_snr": 22.21,
+      "mean_pesq": 1.702,
+      "mean_stoi": 0.959,
+      "mean_speaker_similarity": -0.973
     }
   ]
 }

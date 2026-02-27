@@ -54,6 +54,23 @@ attacks:
     prefix_seconds: 0.64      # length of adversarial prefix segment
     target_token: eos         # "eos" = force end-of-sequence (silence); "blank" = CTC blank
 
+  combine:
+    # Joint multi-surface attack: optimizes embedding + mel + KL + psychoacoustic
+    # simultaneously in a single PGD pass.
+    eps: 0.012
+    alpha: 0.0008
+    iterations: 200
+    masking_gain_db: 6.0
+    n_mels: 80
+    n_fft_scales: [2048, 1024, 512]
+    # ── Loss weights (open-source defaults) ───────────────────────────────
+    # Per-file adaptive weight selection is handled by the GoodNoise API
+    # and is not included in this repository.
+    w_emb: 3.0      # speaker embedding pull (dominant term)
+    w_mel: 1.0      # multi-scale mel disruption
+    w_kl:  0.5      # KL divergence toward noise
+    w_psy: 0.8      # psychoacoustic masking penalty
+
   spectral_filter:
     # Noise-free ClearMask-style attack: no added perturbation
     formant_suppression_db: 12.0     # attenuation of speaker-critical formant bands

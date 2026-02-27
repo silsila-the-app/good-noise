@@ -30,6 +30,7 @@ ATTACKS_TO_RUN = [
     "psychoacoustic_pgd",
     "universal_pgd",
     "asr_disruption",
+    "combine",
 ]
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
